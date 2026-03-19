@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Webhook Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            color: #dcddde;
+            min-height: 100vh;
+        }
+
+        /* LOGIN */
+        .login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #1a1a2e;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .login-overlay.hidden { display: none; }
+        .login-box {
+            background: #16213e;
+            padding: 2.5rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            border: 1px solid #0f3460;
+        }
+        .login-box .logo {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #5865f2;
+            margin-bottom: 0.3rem;
+        }
+        .login-box .logo-sub {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #72767d;
+            margin-bottom: 2rem;
+        }
+        .login-box label {
+            display: block;
+            font-size: 0.8rem;
+            color: #b9bbbe;
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 0.7rem;
+            border: none;
+            border-radius: 4px;
+            background: #0a0a1a;
+            color: #dcddde;
+            font-size: 0.95rem;
+            margin-bottom: 1.2rem;
+            border: 1px solid transparent;
+            transition: border 0.2s;
+        }
+        .login-box input:focus { outline: none; border-color: #5865f2; }
+        .login-btn {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 4px;
+            background: #5865f2;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .login-btn:hover { background: #4752c4; }
+        .login-error {
+            color: #ed4245;
+            font-size: 0.8rem;
+            margin-top: 0.8rem;
+            display: none;
+            text-align: center;
+        }
+
+        /* DASHBOARD */
+        .dashboard { display: none; }
+        .dashboard.active { display: block; }
+
+        /* NAVBAR */
+        .navbar {
+            background: #16213e;
+            padding: 0.8rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #0f3460;
+        }
+        .navbar .brand {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #5865f2;
+        }
+        .navbar .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .navbar .user-info span { font-size: 0.85rem; color: #b9bbbe; }
+        .logout-btn {
+            padding: 0.4rem 1rem;
+            border: 1px solid #ed4245;
+            background: transparent;
+            color: #ed4245;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover { background: #ed4245; color: #fff; }
+
+        /* MAIN LAYOUT */
+        .main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* STATS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: #16213e;
+            padding: 1.2rem;
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+            text-align: center;
+        }
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #5865f2;
+        }
+        .stat-card .stat-label {
+            font-size: 0.75rem;
+            color: #72767d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0.3rem;
+        }
+
+        /* SECTIONS */
+        .sections-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 768px) {
+            .sections-grid { grid-template-columns: 1fr; }
+        }
+        .section {
+            background: #16213e;
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 1rem 1.2rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #0f3460;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-body { padding: 1.2rem; }
+
+        /* WEBHOOK INPUT */
+        .webhook-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .webhook-input-group input {
+            flex: 1;
+            padding: 0.6rem;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            background: #0a0a1a;
+            color: #dcddde;
+            font-size: 0.85rem;
+        }
+        .webhook-input-group input:focus { outline: none; border-color: #5865f2; }
+        .webhook-input-group button {
+            padding: 0.6rem 1rem;
+            border: none;
+            border-radius: 4px;
+            background: #5865f2;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .webhook-input-group button:hover { background: #4752c4; }
+        .webhook-status {
+            padding: 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .webhook-status.active { display: block; }
+        .webhook-status.ok { background: #2d7d46; }
+        .webhook-status.err { background: #a12d2f; }
+        .webhook-status.info { background: #0f3460; }
+
+        /* WEBHOOK INFO */
+        .webhook-info {
+            font-size: 0.8rem;
+            color: #b9bbbe;
+            display: none;
+        }
+        .webhook-info.active { display: block; }
+        .webhook-info .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid #0f346033;
+        }
+        .webhook-info .info-label { color: #72767d; }
+        .webhook-info .info-value { color: #dcddde; font-weight: 500; }
+
+        /* ACTION BUTTONS */
+        .actions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+        .action-btn {
+            width: 100%;
+            padding: 0.65rem 1rem;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: filter 0.2s;
+        }
+        .action-btn:hover { filter: brightness(1.15); }
+        .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .action-btn .icon { font-size: 1rem; width: 20px; text-align: center; }
+        .btn-info { background: #5865f2; }
+        .btn-send { background: #3ba55d; }
+        .btn-edit { background: #faa61a; color: #000; }
+        .btn-delete { background: #ed4245; }
+        .btn-spam { background: #9b59b6; }
+
+        /* SEND MESSAGE AREA */
+        .send-area { display: none; }
+        .send-area.active { display: block; margin-top: 1rem; }
+        .send-area textarea {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            background: #0a0a1a;
+            color: #dcddde;
+            font-size: 0.85rem;
+            font-family: 'Segoe UI', sans-serif;
+            resize: vertical;
+            min-height: 80px;
+            margin-bottom: 0.5rem;
+        }
+        .send-area textarea:focus { outline: none; border-color: #5865f2; }
+        .send-area .send-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .send-area .send-options input {
+            padding: 0.5rem;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            background: #0a0a1a;
+            color: #dcddde;
+            font-size: 0.8rem;
+        }
+        .send-area .send-options input:focus { outline: none; border-color: #5865f2; }
+
+        /* EDIT AREA */
+        .edit-area { display: none; }
+        .edit-area.active { display: block; margin-top: 1rem; }
+        .edit-area input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            background: #0a0a1a;
+            color: #dcddde;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+        .edit-area input:focus { outline: none; border-color: #5865f2; }
+
+        /* LOG */
+        .log-entries {
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.78rem;
+            font-family: 'Consolas', monospace;
+        }
+        .log-entry {
+            padding: 0.4rem 0.6rem;
+            border-bottom: 1px solid #0f346033;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .log-entry .log-time { color: #72767d; white-space: nowrap; }
+        .log-entry.log-ok .log-msg { color: #3ba55d; }
+        .log-entry.log-err .log-msg { color: #ed4245; }
+        .log-entry.log-info .log-msg { color: #5865f2; }
+        .log-empty { color: #72767d; font-size: 0.8rem; text-align: center; padding: 1rem; }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div class="login-overlay" id="loginScreen">
+        <div class="login-box">
+            <div class="logo">Webhook Tool</div>
+            <div class="logo-sub">Panel de Control</div>
+
+            <label for="loginEmail">Correo electronico</label>
+            <input type="email" id="loginEmail" placeholder="usuario@correo.com">
+
+            <label for="loginPass">Contrasena</label>
+            <input type="password" id="loginPass" placeholder="********">
+
+            <button class="login-btn" onclick="login()">Iniciar Sesion</button>
+            <div class="login-error" id="loginError">Credenciales incorrectas</div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="dashboard" id="dashboard">
+
+        <!-- NAVBAR -->
+        <div class="navbar">
+            <div class="brand">Webhook Tool</div>
+            <div class="user-info">
+                <span id="userEmail"></span>
+                <button class="logout-btn" onclick="logout()">Cerrar Sesion</button>
+            </div>
+        </div>
+
+        <div class="main">
+
+            <!-- STATS -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statDeleted">0</div>
+                    <div class="stat-label">Webhooks Eliminados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statMessages">0</div>
+                    <div class="stat-label">Mensajes Enviados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statEdits">0</div>
+                    <div class="stat-label">Ediciones</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statRequests">0</div>
+                    <div class="stat-label">Peticiones Totales</div>
+                </div>
+            </div>
+
+            <div class="sections-grid">
+
+                <!-- LEFT: WEBHOOK ACTIONS -->
+                <div class="section">
+                    <div class="section-header">Acciones de Webhook</div>
+                    <div class="section-body">
+
+                        <!-- WEBHOOK URL INPUT -->
+                        <div class="webhook-input-group">
+                            <input type="text" id="webhookUrl" placeholder="https://discord.com/api/webhooks/ID/TOKEN">
+                            <button onclick="loadWebhook()">Cargar</button>
+                        </div>
+                        <div class="webhook-status" id="webhookStatus"></div>
+                        <div class="webhook-info" id="webhookInfo"></div>
+
+                        <!-- ALL ACTIONS -->
+                        <div class="actions-list">
+                            <button class="action-btn btn-info" onclick="getWebhookInfo()" id="btnInfo" disabled>
+                                <span class="icon">i</span> Obtener Info del Webhook
+                            </button>
+                            <button class="action-btn btn-send" onclick="toggleSendArea()" id="btnSend" disabled>
+                                <span class="icon">+</span> Enviar Mensaje
+                            </button>
+                            <button class="action-btn btn-edit" onclick="toggleEditArea()" id="btnEdit" disabled>
+                                <span class="icon">E</span> Editar Webhook (nombre/avatar)
+                            </button>
+                            <button class="action-btn btn-spam" onclick="spamWebhook()" id="btnSpam" disabled>
+                                <span class="icon">S</span> Spam Test (5 mensajes)
+                            </button>
+                            <button class="action-btn btn-delete" onclick="deleteWebhook()" id="btnDelete" disabled>
+                                <span class="icon">X</span> Eliminar Webhook
+                            </button>
+                        </div>
+
+                        <!-- SEND MESSAGE FORM -->
+                        <div class="send-area" id="sendArea">
+                            <div class="send-options">
+                                <input type="text" id="msgUsername" placeholder="Nombre del bot (opcional)">
+                                <input type="text" id="msgAvatar" placeholder="URL avatar (opcional)">
+                            </div>
+                            <textarea id="msgContent" placeholder="Escribe el mensaje..."></textarea>
+                            <button class="action-btn btn-send" onclick="sendMessage()" style="justify-content:center;">Enviar</button>
+                        </div>
+
+                        <!-- EDIT WEBHOOK FORM -->
+                        <div class="edit-area" id="editArea">
+                            <input type="text" id="editName" placeholder="Nuevo nombre del webhook">
+                            <input type="text" id="editAvatar" placeholder="URL del nuevo avatar (opcional)">
+                            <button class="action-btn btn-edit" onclick="editWebhook()" style="justify-content:center;">Guardar Cambios</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: LOG -->
+                <div class="section">
+                    <div class="section-header">Registro de Actividad</div>
+                    <div class="section-body">
+                        <div class="log-entries" id="logEntries">
+                            <div class="log-empty">Sin actividad</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIG =====
+        // Cambia estas credenciales a las que tu quieras
+        const VALID_EMAIL = 'admin@webhook.com';
+        const VALID_PASS = 'admin123';
+
+        // ===== STATE =====
+        let currentWebhookUrl = '';   // URL original (puede ser proxy)
+        let currentDirectUrl = '';    // URL directa de Discord
+        let isProxy = false;
+        let stats = { deleted: 0, messages: 0, edits: 0, requests: 0 };
+
+        // Patrones soportados
+        const DISCORD_PATTERN = /^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/(\d+)\/(.+)$/;
+        const KNOWN_PROXIES = [
+            /^https:\/\/hooks\.hyra\.io\/api\/webhooks\/(\d+)\/(.+)$/,
+            /^https:\/\/canary\.discord\.com\/api\/webhooks\/(\d+)\/(.+)$/,
+            /^https:\/\/ptb\.discord\.com\/api\/webhooks\/(\d+)\/(.+)$/,
+        ];
+
+        // Convierte cualquier URL de webhook (directa o proxy) a la URL directa de Discord
+        function resolveWebhookUrl(url) {
+            // URL directa de Discord
+            const directMatch = url.match(DISCORD_PATTERN);
+            if (directMatch) {
+                return { direct: url, proxy: false, id: directMatch[2], token: directMatch[3] };
+            }
+            // Proxies conocidos
+            for (const pattern of KNOWN_PROXIES) {
+                const m = url.match(pattern);
+                if (m) {
+                    return {
+                        direct: 'https://discord.com/api/webhooks/' + m[1] + '/' + m[2],
+                        proxy: true,
+                        id: m[1],
+                        token: m[2]
+                    };
+                }
+            }
+            // Intento generico: cualquier URL que tenga /api/webhooks/ID/TOKEN
+            const generic = url.match(/\/api\/webhooks\/(\d+)\/([A-Za-z0-9_-]+)$/);
+            if (generic) {
+                return {
+                    direct: 'https://discord.com/api/webhooks/' + generic[1] + '/' + generic[2],
+                    proxy: true,
+                    id: generic[1],
+                    token: generic[2]
+                };
+            }
+            return null;
+        }
+
+        // ===== LOGIN =====
+        function login() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const err = document.getElementById('loginError');
+
+            if (email === VALID_EMAIL && pass === VALID_PASS) {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('dashboard').classList.add('active');
+                document.getElementById('userEmail').textContent = email;
+                err.style.display = 'none';
+            } else {
+                err.style.display = 'block';
+            }
+        }
+
+        // Enter key on login
+        document.getElementById('loginPass').addEventListener('keydown', e => {
+            if (e.key === 'Enter') login();
+        });
+
+        function logout() {
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPass').value = '';
+        }
+
+        // ===== LOG =====
+        function addLog(msg, type) {
+            const container = document.getElementById('logEntries');
+            const empty = container.querySelector('.log-empty');
+            if (empty) empty.remove();
+
+            const now = new Date();
+            const time = now.toLocaleTimeString('es-ES', { hour12: false });
+            const entry = document.createElement('div');
+            entry.className = 'log-entry log-' + type;
+            entry.innerHTML = '<span class="log-time">' + time + '</span><span class="log-msg">' + msg + '</span>';
+            container.prepend(entry);
+        }
+
+        // ===== STATS =====
+        function updateStats() {
+            document.getElementById('statDeleted').textContent = stats.deleted;
+            document.getElementById('statMessages').textContent = stats.messages;
+            document.getElementById('statEdits').textContent = stats.edits;
+            document.getElementById('statRequests').textContent = stats.requests;
+        }
+
+        // ===== WEBHOOK URL =====
+        function setStatus(msg, type) {
+            const el = document.getElementById('webhookStatus');
+            el.textContent = msg;
+            el.className = 'webhook-status active ' + type;
+        }
+
+        function enableButtons(enabled) {
+            ['btnInfo','btnSend','btnEdit','btnSpam','btnDelete'].forEach(id => {
+                document.getElementById(id).disabled = !enabled;
+            });
+        }
+
+        function loadWebhook() {
+            const url = document.getElementById('webhookUrl').value.trim();
+            const resolved = resolveWebhookUrl(url);
+
+            if (!resolved) {
+                setStatus('URL no valida. Soporta: Discord directo, Hyra, Canary, PTB o cualquier proxy con /api/webhooks/ID/TOKEN', 'err');
+                enableButtons(false);
+                return;
+            }
+
+            currentWebhookUrl = url;
+            currentDirectUrl = resolved.direct;
+            isProxy = resolved.proxy;
+
+            if (isProxy) {
+                setStatus('Proxy detectado — URL directa: discord.com/api/webhooks/' + resolved.id + '/...', 'info');
+                addLog('Webhook cargado (PROXY detectado, ID: ' + resolved.id + ')', 'info');
+            } else {
+                setStatus('Webhook cargado correctamente (directo)', 'ok');
+                addLog('Webhook cargado (directo, ID: ' + resolved.id + ')', 'info');
+            }
+
+            enableButtons(true);
+            document.getElementById('webhookInfo').classList.remove('active');
+        }
+
+        // ===== GET INFO =====
+        async function getWebhookInfo() {
+            if (!currentDirectUrl) return;
+            stats.requests++;
+            updateStats();
+            addLog('Obteniendo info (via URL directa)...', 'info');
+
+            try {
+                const res = await fetch(currentDirectUrl);
+                if (!res.ok) throw new Error('Status ' + res.status);
+                const data = await res.json();
+
+                const infoEl = document.getElementById('webhookInfo');
+                infoEl.innerHTML =
+                    '<div class="info-row"><span class="info-label">ID</span><span class="info-value">' + data.id + '</span></div>' +
+                    '<div class="info-row"><span class="info-label">Nombre</span><span class="info-value">' + (data.name || 'N/A') + '</span></div>' +
+                    '<div class="info-row"><span class="info-label">Canal ID</span><span class="info-value">' + (data.channel_id || 'N/A') + '</span></div>' +
+                    '<div class="info-row"><span class="info-label">Server ID</span><span class="info-value">' + (data.guild_id || 'N/A') + '</span></div>' +
+                    '<div class="info-row"><span class="info-label">Tipo</span><span class="info-value">' + data.type + '</span></div>' +
+                    '<div class="info-row"><span class="info-label">Avatar</span><span class="info-value">' + (data.avatar ? 'Si' : 'No') + '</span></div>';
+                infoEl.classList.add('active');
+                addLog('Info obtenida: ' + (data.name || data.id), 'ok');
+            } catch (err) {
+                setStatus('Error al obtener info: ' + err.message, 'err');
+                addLog('Error info: ' + err.message, 'err');
+            }
+        }
+
+        // ===== SEND MESSAGE =====
+        function toggleSendArea() {
+            const el = document.getElementById('sendArea');
+            el.classList.toggle('active');
+            document.getElementById('editArea').classList.remove('active');
+        }
+
+        async function sendMessage() {
+            if (!currentDirectUrl) return;
+            const content = document.getElementById('msgContent').value.trim();
+            if (!content) { setStatus('Escribe un mensaje', 'err'); return; }
+
+            const body = { content: content };
+            const username = document.getElementById('msgUsername').value.trim();
+            const avatar = document.getElementById('msgAvatar').value.trim();
+            if (username) body.username = username;
+            if (avatar) body.avatar_url = avatar;
+
+            stats.requests++;
+            stats.messages++;
+            updateStats();
+
+            // Intenta primero con URL original (proxy), si falla usa directa
+            const urls = isProxy ? [currentWebhookUrl, currentDirectUrl] : [currentDirectUrl];
+            let sent = false;
+            for (const sendUrl of urls) {
+                try {
+                    const res = await fetch(sendUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    if (res.status === 204 || res.status === 200) {
+                        setStatus('Mensaje enviado', 'ok');
+                        addLog('Mensaje enviado' + (sendUrl !== currentDirectUrl ? ' (via proxy)' : ''), 'ok');
+                        document.getElementById('msgContent').value = '';
+                        sent = true;
+                        break;
+                    }
+                } catch (e) { /* intenta siguiente URL */ }
+            }
+            if (!sent) {
+                setStatus('Error al enviar mensaje', 'err');
+                addLog('Error envio: todas las URLs fallaron', 'err');
+            }
+        }
+
+        // ===== EDIT WEBHOOK =====
+        function toggleEditArea() {
+            const el = document.getElementById('editArea');
+            el.classList.toggle('active');
+            document.getElementById('sendArea').classList.remove('active');
+        }
+
+        async function editWebhook() {
+            if (!currentDirectUrl) return;
+            const name = document.getElementById('editName').value.trim();
+            if (!name) { setStatus('Escribe un nombre', 'err'); return; }
+
+            const body = { name: name };
+            const avatar = document.getElementById('editAvatar').value.trim();
+            if (avatar) body.avatar = avatar;
+
+            stats.requests++;
+            stats.edits++;
+            updateStats();
+
+            try {
+                const res = await fetch(currentDirectUrl, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (res.ok) {
+                    setStatus('Webhook editado', 'ok');
+                    addLog('Webhook editado: ' + name, 'ok');
+                } else {
+                    throw new Error('Status ' + res.status);
+                }
+            } catch (err) {
+                setStatus('Error al editar: ' + err.message, 'err');
+                addLog('Error edicion: ' + err.message, 'err');
+            }
+        }
+
+        // ===== SPAM TEST =====
+        async function spamWebhook() {
+            if (!currentDirectUrl) return;
+            addLog('Iniciando spam test (5 msgs)...', 'info');
+
+            for (let i = 1; i <= 5; i++) {
+                stats.requests++;
+                stats.messages++;
+                updateStats();
+                try {
+                    await fetch(currentDirectUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: 'Spam test mensaje #' + i })
+                    });
+                    addLog('Spam #' + i + ' enviado', 'ok');
+                } catch (err) {
+                    addLog('Spam #' + i + ' fallo', 'err');
+                }
+                await new Promise(r => setTimeout(r, 500));
+            }
+            setStatus('Spam test completado', 'ok');
+        }
+
+        // ===== DELETE WEBHOOK =====
+        async function deleteWebhook() {
+            if (!currentDirectUrl) return;
+            if (!confirm('Seguro que quieres eliminar este webhook?' + (isProxy ? '\n(Se usara la URL directa de Discord para eliminar)' : ''))) return;
+
+            stats.requests++;
+            addLog('Eliminando webhook (URL directa)...', 'info');
+
+            try {
+                // Siempre usa la URL directa de Discord para DELETE
+                const res = await fetch(currentDirectUrl, { method: 'DELETE' });
+                if (res.status === 204) {
+                    stats.deleted++;
+                    updateStats();
+                    setStatus('Webhook eliminado exitosamente', 'ok');
+                    addLog('Webhook ELIMINADO' + (isProxy ? ' (bypass de proxy)' : ''), 'ok');
+                    enableButtons(false);
+                    currentWebhookUrl = '';
+                    currentDirectUrl = '';
+                    isProxy = false;
+                    document.getElementById('webhookUrl').value = '';
+                    document.getElementById('webhookInfo').classList.remove('active');
+                } else if (res.status === 404) {
+                    setStatus('Webhook no encontrado o ya eliminado', 'err');
+                    addLog('Webhook no encontrado (404)', 'err');
+                } else {
+                    throw new Error('Status ' + res.status);
+                }
+            } catch (err) {
+                setStatus('Error: ' + err.message, 'err');
+                addLog('Error eliminacion: ' + err.message, 'err');
+            }
+        }
+    </script>
+</body>
+</html>
